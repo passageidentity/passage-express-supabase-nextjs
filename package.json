@@ -15,7 +15,7 @@
     "@next-auth/supabase-adapter": "^0.2.1",
     "@passageidentity/passage-elements": "^1.5.0",
     "@passageidentity/passage-js": "^3.5.0",
-    "@passageidentity/passage-node": "latest",
+    "@passageidentity/passage-node": "^2.3.0",
     "@supabase/supabase-js": "^2.21.0",
     "@types/node": "18.15.12",
     "@types/react": "18.0.37",

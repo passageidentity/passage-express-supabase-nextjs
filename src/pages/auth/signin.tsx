@@ -1,26 +1,34 @@
-import { getCsrfToken, signIn } from "next-auth/react"
-import { useState } from "react";
-import { passage } from '@/utils/passage';
-import { useRouter } from 'next/router'
+import { getCsrfToken, signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
+import { passage } from "@/utils/passage";
+import { useRouter } from "next/router";
 import Link from "next/link";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/[...nextauth]";
 
 export default function SignIn({ csrfToken }: { csrfToken: string }) {
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter()
+  // const [csrfToken, setCsrfToken] = useState("")
+  const router = useRouter();
+  // const csrfToken = await getCsrfToken()
+
+  useEffect(() => {}, []);
 
   const handleCredentialLogin = async (email: string, password: string) => {
-    if (!showPassword) return setShowPassword(true)
+    if (!showPassword) return setShowPassword(true);
 
     return signIn("credentials", {
       redirect: true,
       email,
       password,
       callbackUrl: router.query.callbackUrl as string,
-    })
-  }
+    });
+  };
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
+
+    return signIn("customProvider");
 
     const email = e.target.email?.value;
     const password = e.target.password?.value;
@@ -28,20 +36,23 @@ export default function SignIn({ csrfToken }: { csrfToken: string }) {
     const user = await passage.identifierExists(email);
 
     if (!user) {
-      await handleCredentialLogin(email, password)
-      return
+      await handleCredentialLogin(email, password);
+      return;
     }
 
-    if (user.hasPasskey && (await passage.getCredentialAvailable()).isAvailable) {
+    if (
+      user.hasPasskey &&
+      (await passage.getCredentialAvailable()).isAvailable
+    ) {
       try {
-        await passage.login(email)
+        await passage.login(email);
       } catch (error) {
-        await handleCredentialLogin(email, password)
+        await handleCredentialLogin(email, password);
       }
     } else {
-      await handleCredentialLogin(email, password)
+      await handleCredentialLogin(email, password);
     }
-  }
+  };
 
   return (
     <div className="flex items-center justify-center w-screen h-screen font-medium">
@@ -59,7 +70,7 @@ export default function SignIn({ csrfToken }: { csrfToken: string }) {
           </div>
 
           <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-            <form className="space-y-6" onSubmit={handleLogin}>
+            {/* <form className="space-y-6" onSubmit={handleLogin}>
               <input name="csrfToken" type="hidden" defaultValue={csrfToken} />
               <div>
                 <label htmlFor="email" className="block text-sm font-medium leading-6 text-white">
@@ -108,12 +119,45 @@ export default function SignIn({ csrfToken }: { csrfToken: string }) {
                 >
                   Sign in
                 </button>
+
+
+                <button
+                  className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                  onClick={() => signIn("oidc")}
+                >Custom Provider</button>
               </div>
-            </form>
+            </form> */}
+
+            <button
+              className="mb-5 flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              onClick={() => signIn("passage")}
+            >
+              Sign In With Passage
+            </button>
+
+            <button
+              className="mb-5 flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              onClick={() => signIn("cognito")}
+            >
+              Sign In With Cognito
+            </button>
+
+            {/* <button
+              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              onClick={() => signIn("example")}
+            >
+              Sign In With Example
+            </button> */}
 
             <p className="mt-10 text-center text-sm text-gray-500">
-              Not a member?{' '}
-              <Link href={{ pathname: '/auth/signup', query: { callbackUrl: router.query.callbackUrl } }} className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+              Not a member?{" "}
+              <Link
+                href={{
+                  pathname: "/auth/signup",
+                  query: { callbackUrl: router.query.callbackUrl },
+                }}
+                className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
+              >
                 Start a 14 day free trial
               </Link>
             </p>
@@ -121,13 +165,20 @@ export default function SignIn({ csrfToken }: { csrfToken: string }) {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export async function getServerSideProps(context: any) {
-  return {
-    props: {
-      csrfToken: await getCsrfToken(context),
-    },
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  // If the user is already logged in, redirect.
+  // Note: Make sure not to redirect to the same page
+  // To avoid an infinite loop!
+  if (session) {
+    return { redirect: { destination: "/" } };
   }
+
+  return {
+    props: {},
+  };
 }
